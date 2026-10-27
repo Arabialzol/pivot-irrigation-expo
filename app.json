@@ -29,6 +29,9 @@
         "projectId": "f8d52863-a545-4374-b682-e3bbf4f2803c"
       }
     },
-    "owner": "alarabi"
+    "owner": "alarabi",
+    "plugins": [
+      "expo-font"
+    ]
   }
 }
