@@ -9,3 +9,5 @@ web-build/
 *.mobileprovision
 *.orig.*
 .env*.local
+android/
+ios/
