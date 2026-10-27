@@ -23,6 +23,12 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "extra": {
+      "eas": {
+        "projectId": "f8d52863-a545-4374-b682-e3bbf4f2803c"
+      }
+    },
+    "owner": "alarabi"
   }
 }
