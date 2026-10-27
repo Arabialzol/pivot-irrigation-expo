@@ -1,0 +1,130 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 500" width="100%" height="100%" fill="none">
+  <!-- Aqua Pivot Logo Vector Graphic -->
+  <g id="pivot-structure" stroke="#065A9E" stroke-linecap="round" stroke-linejoin="round">
+    <!-- Far Left Span (Span 4) -->
+    <path d="M 102 210 Q 115 190 128 210" stroke-width="2.5" />
+    <line x1="102" y1="210" x2="128" y2="210" stroke-width="3" />
+    <line x1="108" y1="198" x2="114" y2="210" stroke-width="1.5" />
+    <line x1="120" y1="198" x2="116" y2="210" stroke-width="1.5" />
+    <!-- Tower 4 legs -->
+    <line x1="102" y1="210" x2="98" y2="228" stroke-width="2.2" />
+    <line x1="102" y1="210" x2="106" y2="228" stroke-width="2.2" />
+    <line x1="97" y1="228" x2="107" y2="228" stroke-width="2.5" />
+    <circle cx="97" cy="228" r="3.5" fill="#065A9E" stroke="#065A9E" stroke-width="1.5" />
+    <circle cx="107" cy="228" r="3.5" fill="#065A9E" stroke="#065A9E" stroke-width="1.5" />
+    <!-- Droplet 4 -->
+    <line x1="115" y1="210" x2="115" y2="220" stroke-width="1.5" />
+    <circle cx="115" cy="222" r="1.5" fill="#065A9E" />
+
+    <!-- Span 3 -->
+    <path d="M 128 210 Q 150 176 172 210" stroke-width="3.2" />
+    <line x1="128" y1="210" x2="172" y2="210" stroke-width="3.5" />
+    <!-- Webbing Span 3 -->
+    <line x1="128" y1="210" x2="139" y2="187" stroke-width="1.8" />
+    <line x1="150" y1="210" x2="139" y2="187" stroke-width="1.8" />
+    <line x1="150" y1="210" x2="161" y2="187" stroke-width="1.8" />
+    <line x1="172" y1="210" x2="161" y2="187" stroke-width="1.8" />
+    <!-- Tower 3 Legs & Wheels -->
+    <line x1="172" y1="210" x2="159" y2="236" stroke-width="3" />
+    <line x1="172" y1="210" x2="184" y2="236" stroke-width="3" />
+    <line x1="157" y1="236" x2="186" y2="236" stroke-width="3.5" />
+    <circle cx="157" cy="236" r="4.5" fill="#ffffff" stroke="#065A9E" stroke-width="2" />
+    <circle cx="157" cy="236" r="1.5" fill="#065A9E" />
+    <circle cx="186" cy="236" r="4.5" fill="#ffffff" stroke="#065A9E" stroke-width="2" />
+    <circle cx="186" cy="236" r="1.5" fill="#065A9E" />
+    <!-- Drops Span 3 -->
+    <line x1="140" y1="210" x2="140" y2="224" stroke-width="1.8" />
+    <path d="M 140 224 Q 138 228 140 230 Q 142 228 140 224 Z" fill="#065A9E" stroke="none" />
+    <line x1="160" y1="210" x2="160" y2="225" stroke-width="1.8" />
+    <path d="M 160 225 Q 158 229 160 231 Q 162 229 160 225 Z" fill="#065A9E" stroke="none" />
+
+    <!-- Span 2 (Middle Span) -->
+    <path d="M 172 210 Q 230 148 290 205" stroke-width="4.2" />
+    <line x1="172" y1="210" x2="290" y2="205" stroke-width="4.5" />
+    <!-- Webbing Span 2 -->
+    <line x1="172" y1="210" x2="192" y2="175" stroke-width="2.2" />
+    <line x1="210" y1="209" x2="192" y2="175" stroke-width="2.2" />
+    <line x1="210" y1="209" x2="230" y2="162" stroke-width="2.2" />
+    <line x1="250" y1="208" x2="230" y2="162" stroke-width="2.2" />
+    <line x1="250" y1="208" x2="272" y2="174" stroke-width="2.2" />
+    <line x1="290" y1="205" x2="272" y2="174" stroke-width="2.2" />
+    <!-- Tower 2 Legs & Wheels -->
+    <line x1="290" y1="205" x2="260" y2="242" stroke-width="4" />
+    <line x1="290" y1="205" x2="315" y2="242" stroke-width="4" />
+    <line x1="255" y1="242" x2="320" y2="242" stroke-width="4.5" />
+    <circle cx="255" cy="242" r="7" fill="#ffffff" stroke="#065A9E" stroke-width="3" />
+    <circle cx="255" cy="242" r="2.5" fill="#065A9E" />
+    <circle cx="320" cy="242" r="7" fill="#ffffff" stroke="#065A9E" stroke-width="3" />
+    <circle cx="320" cy="242" r="2.5" fill="#065A9E" />
+    <!-- Drops Span 2 -->
+    <line x1="205" y1="209" x2="205" y2="228" stroke-width="2.2" />
+    <path d="M 205 228 Q 202 233 205 236 Q 208 233 205 228 Z" fill="#065A9E" stroke="none" />
+    <line x1="240" y1="208" x2="240" y2="230" stroke-width="2.2" />
+    <path d="M 240 230 Q 237 235 240 238 Q 243 235 240 230 Z" fill="#065A9E" stroke="none" />
+
+    <!-- Forefront Span (Span 1, Largest on Right) -->
+    <!-- Arched upper chord -->
+    <path d="M 290 205 Q 395 105 480 148" stroke-width="5.5" />
+    <!-- Main water pipe -->
+    <line x1="290" y1="205" x2="480" y2="148" stroke-width="6" />
+    <!-- Sub-truss pipe curve -->
+    <path d="M 305 200 Q 390 128 465 152" stroke-width="2.5" />
+    <!-- Diagonal Lattice Webbing -->
+    <line x1="290" y1="205" x2="328" y2="152" stroke-width="3" />
+    <line x1="360" y1="184" x2="328" y2="152" stroke-width="3" />
+    <line x1="360" y1="184" x2="395" y2="132" stroke-width="3" />
+    <line x1="428" y1="164" x2="395" y2="132" stroke-width="3" />
+    <line x1="428" y1="164" x2="455" y2="138" stroke-width="3" />
+    <line x1="480" y1="148" x2="455" y2="138" stroke-width="3" />
+    <!-- Internal cross trusses -->
+    <line x1="328" y1="152" x2="355" y2="142" stroke-width="2" />
+    <line x1="395" y1="132" x2="360" y2="184" stroke-width="2" />
+    <line x1="395" y1="132" x2="430" y2="145" stroke-width="2" />
+
+    <!-- Dropper Pipes & Spray Droplets Span 1 -->
+    <line x1="340" y1="190" x2="340" y2="220" stroke-width="2.8" />
+    <path d="M 340 220 Q 336 226 340 230 Q 344 226 340 220 Z" fill="#065A9E" stroke="none" />
+
+    <line x1="390" y1="175" x2="390" y2="215" stroke-width="2.8" />
+    <path d="M 390 215 Q 386 221 390 226 Q 394 221 390 215 Z" fill="#065A9E" stroke="none" />
+
+    <line x1="440" y1="160" x2="440" y2="210" stroke-width="2.8" />
+    <path d="M 440 210 Q 436 216 440 221 Q 444 216 440 210 Z" fill="#065A9E" stroke="none" />
+
+    <!-- Forefront Tower (Tower 1 - A-Frame) -->
+    <!-- Front Leg & Rear Leg -->
+    <line x1="480" y1="148" x2="435" y2="242" stroke-width="5" />
+    <line x1="480" y1="148" x2="525" y2="252" stroke-width="4.5" />
+    <!-- Wheel Base Bar -->
+    <line x1="445" y1="250" x2="525" y2="252" stroke-width="5" />
+    <!-- Big Front Drive Wheel -->
+    <circle cx="435" cy="250" r="19" fill="#065A9E" stroke="#ffffff" stroke-width="4" />
+    <circle cx="435" cy="250" r="9" fill="#ffffff" stroke="#065A9E" stroke-width="4" />
+    <circle cx="435" cy="250" r="3.5" fill="#065A9E" />
+  </g>
+
+  <!-- Green Ground / Crop Field Swoosh Shape -->
+  <path d="M 100 258 C 190 252, 275 285, 410 270 C 330 305, 230 340, 120 275 C 105 268, 102 262, 100 258 Z" fill="#52A428" />
+  <path d="M 120 274 C 220 330, 310 295, 390 273 C 280 328, 185 320, 120 274 Z" fill="#469320" opacity="0.3" />
+
+  <!-- White Canal / Path divider -->
+  <path d="M 315 285 C 330 318, 385 330, 420 328 C 360 330, 325 315, 315 285 Z" fill="#ffffff" opacity="0.8" />
+
+  <!-- Water Wave / Canal Swoosh Shape (Blue) -->
+  <path d="M 345 312 C 400 285, 475 270, 535 248 C 530 295, 470 338, 385 342 C 345 344, 340 322, 345 312 Z" fill="#008FD5" />
+  <!-- Water highlight drop -->
+  <path d="M 355 315 C 390 295, 435 295, 455 315 C 410 328, 375 330, 355 315 Z" fill="#38BDF8" opacity="0.9" />
+
+  <!-- Aqua Pivot Calc Typography -->
+  <g font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="900">
+    <!-- 'Aqua' in Dark Royal Blue -->
+    <text x="65" y="420" font-size="78" fill="#004B87" letter-spacing="-1">Aqua</text>
+    <!-- 'Pivot' in Fresh Vibrant Green -->
+    <text x="330" y="420" font-size="78" fill="#52A428" letter-spacing="-1">Pivot</text>
+    <!-- 'CALC' Badge in Ocean Blue -->
+    <g transform="translate(470, 360)">
+      <rect x="0" y="0" width="84" height="34" rx="8" fill="#008FD5" />
+      <text x="42" y="24" font-size="20" fill="#ffffff" font-weight="800" text-anchor="middle" letter-spacing="1">CALC</text>
+    </g>
+  </g>
+</svg>
