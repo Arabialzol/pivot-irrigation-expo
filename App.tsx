@@ -34,6 +34,7 @@ import { AdminLoginModal } from './src/components/AdminLoginModal';
 import { ClientRequestsModal } from './src/components/ClientRequestsModal';
 import { HydraulicCalculator } from './src/components/HydraulicCalculator';
 import { ReportModal } from './src/components/ReportModal';
+import { NozzleReportModal } from './src/components/NozzleReportModal';
 import { GuideModal } from './src/components/GuideModal';
 import {
   isAdminAuthenticated,
@@ -54,6 +55,7 @@ function AppInner() {
   const [isLoginOpen, setIsLoginOpen] = useState(false);
   const [isRequestsOpen, setIsRequestsOpen] = useState(false);
   const [isReportOpen, setIsReportOpen] = useState(false);
+  const [isNozzleReportOpen, setIsNozzleReportOpen] = useState(false);
   const [isGuideOpen, setIsGuideOpen] = useState(false);
   const [requestsList, setRequestsList] = useState<ClientNozzleRequest[]>(() => getClientRequests());
 
@@ -176,6 +178,7 @@ function AppInner() {
                 onChange={handleNozzleConfigChange}
                 onPivotConfigChange={handlePivotConfigChange}
                 onOpenReport={() => setIsReportOpen(true)}
+                onOpenNozzleReport={() => setIsNozzleReportOpen(true)}
                 isAdmin={isAdmin}
                 onOpenLogin={() => setIsLoginOpen(true)}
                 onLogout={() => {
@@ -282,6 +285,16 @@ function AppInner() {
       <ReportModal
         isOpen={isReportOpen}
         onClose={() => setIsReportOpen(false)}
+        config={config}
+        results={results}
+        nozzleConfig={nozzleConfig}
+        nozzleResults={nozzleResults}
+      />
+
+      {/* Supervisor Detailed Nozzles Report Modal */}
+      <NozzleReportModal
+        isOpen={isNozzleReportOpen}
+        onClose={() => setIsNozzleReportOpen(false)}
         config={config}
         results={results}
         nozzleConfig={nozzleConfig}

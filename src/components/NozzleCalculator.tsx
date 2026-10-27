@@ -32,6 +32,7 @@ interface NozzleCalculatorProps {
   onChange: (updated: NozzleConfig) => void;
   onPivotConfigChange?: (updated: PivotConfig) => void;
   onOpenReport: () => void;
+  onOpenNozzleReport?: () => void;
   isAdmin: boolean;
   onOpenLogin: () => void;
   onLogout?: () => void;
@@ -58,6 +59,7 @@ export const NozzleCalculator: React.FC<NozzleCalculatorProps> = ({
   onChange,
   onPivotConfigChange,
   onOpenReport,
+  onOpenNozzleReport,
   isAdmin,
   onOpenLogin,
   onLogout,
@@ -165,43 +167,30 @@ export const NozzleCalculator: React.FC<NozzleCalculatorProps> = ({
     <View style={styles.card}>
       {/* Header */}
       <View style={styles.cardHeader}>
-        <View style={styles.headerTitleRow}>
-          <MaterialCommunityIcons name="water-pump" size={20} color="#38bdf8" />
-          <Text style={styles.cardTitle}>
-            {isAdmin ? 'جدول الفوهات الكامل (معتمد: muzamil)' : 'حاسبة وبرمجة فوهات البخاخات'}
-          </Text>
-        </View>
-        <View style={{ flexDirection: 'row-reverse', gap: 6, alignItems: 'center' }}>
-          {isAdmin ? (
-            <>
-              {onOpenRequests && (
-                <TouchableOpacity
-                  style={[styles.pdfBtn, { backgroundColor: '#d97706', position: 'relative' }]}
-                  onPress={onOpenRequests}
-                  activeOpacity={0.8}
-                >
-                  <MaterialCommunityIcons name="clipboard-list" size={14} color="#ffffff" />
-                  <Text style={styles.pdfBtnText}>
-                    الطلبات الواردة ({requestsCount})
-                  </Text>
-                </TouchableOpacity>
+        <View style={styles.headerTopRow}>
+          <View style={styles.headerTitleRow}>
+            <View style={styles.headerIconBadge}>
+              <MaterialCommunityIcons name="water-pump" size={20} color="#38bdf8" />
+            </View>
+            <View style={styles.titleBox}>
+              {isAdmin ? (
+                <View style={styles.adminTitleRow}>
+                  <Text style={styles.cardTitle}>جدول الفوهات المعتمد : </Text>
+                  <View style={styles.adminBadge}>
+                    <MaterialCommunityIcons name="shield-check" size={13} color="#ffffff" />
+                    <Text style={styles.adminBadgeText}>muzamil</Text>
+                  </View>
+                </View>
+              ) : (
+                <Text style={styles.cardTitle}>حاسبة وبرمجة فوهات البخاخات</Text>
               )}
-              <TouchableOpacity style={styles.pdfBtn} onPress={onOpenReport} activeOpacity={0.8}>
-                <MaterialCommunityIcons name="file-pdf-box" size={16} color="#ffffff" />
-                <Text style={styles.pdfBtnText}>تصدير PDF</Text>
-              </TouchableOpacity>
-              {onLogout && (
-                <TouchableOpacity
-                  style={[styles.pdfBtn, { backgroundColor: '#1e293b', borderColor: '#475569', borderWidth: 1 }]}
-                  onPress={onLogout}
-                  activeOpacity={0.8}
-                >
-                  <MaterialCommunityIcons name="logout" size={14} color="#94a3b8" />
-                  <Text style={[styles.pdfBtnText, { color: '#94a3b8' }]}>قفل</Text>
-                </TouchableOpacity>
+              {isAdmin && (
+                <Text style={styles.adminSubTitle}>لوحة المشرف المعتمد · إشراف المهندس مزمل</Text>
               )}
-            </>
-          ) : (
+            </View>
+          </View>
+
+          {!isAdmin && (
             <TouchableOpacity
               style={[styles.pdfBtn, { backgroundColor: '#0284c7' }]}
               onPress={onOpenLogin}
@@ -212,6 +201,47 @@ export const NozzleCalculator: React.FC<NozzleCalculatorProps> = ({
             </TouchableOpacity>
           )}
         </View>
+
+        {/* Supervisor Action Toolbar */}
+        {isAdmin && (
+          <View style={styles.headerActionsToolbar}>
+            {onOpenRequests && (
+              <TouchableOpacity
+                style={[styles.toolbarBtn, { backgroundColor: '#d97706' }]}
+                onPress={onOpenRequests}
+                activeOpacity={0.8}
+              >
+                <MaterialCommunityIcons name="clipboard-list" size={14} color="#ffffff" />
+                <Text style={styles.toolbarBtnText}>
+                  الطلبات الواردة ({requestsCount})
+                </Text>
+              </TouchableOpacity>
+            )}
+
+            <TouchableOpacity
+              style={[styles.toolbarBtn, { backgroundColor: '#0284c7' }]}
+              onPress={onOpenNozzleReport || onOpenReport}
+              activeOpacity={0.8}
+            >
+              <MaterialCommunityIcons name="file-document-outline" size={15} color="#ffffff" />
+              <Text style={styles.toolbarBtnText}>جدول الفوهات (PDF)</Text>
+            </TouchableOpacity>
+
+            {onLogout && (
+              <TouchableOpacity
+                style={[
+                  styles.toolbarBtn,
+                  { backgroundColor: '#1e293b', borderColor: '#475569', borderWidth: 1 },
+                ]}
+                onPress={onLogout}
+                activeOpacity={0.8}
+              >
+                <MaterialCommunityIcons name="logout" size={14} color="#94a3b8" />
+                <Text style={[styles.toolbarBtnText, { color: '#94a3b8' }]}>قفل</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        )}
       </View>
 
       {/* Admin Notice Bar when logged in */}
@@ -699,7 +729,7 @@ export const NozzleCalculator: React.FC<NozzleCalculatorProps> = ({
         {isAdmin && filteredSprinklers.length > 50 && (
           <View style={styles.moreAlert}>
             <Text style={styles.moreAlertText}>
-              يتم عرض أول 50 بخاخاً في المعاينة السريعة. للاطلاع على الجدول بالكامل وحفظه، استخدم زر "تصدير PDF".
+              يتم عرض أول 50 بخاخاً في المعاينة السريعة. للاطلاع على الجدول بالكامل وتصديره وطباعته، اضغط على زر "ملف الفونيات (PDF)".
             </Text>
           </View>
         )}
@@ -755,25 +785,87 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   cardHeader: {
+    marginBottom: 16,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#1e293b',
+  },
+  headerTopRow: {
     flexDirection: 'row-reverse',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 16,
-    paddingBottom: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: '#1e293b',
   },
   headerTitleRow: {
     flexDirection: 'row-reverse',
     alignItems: 'center',
-    gap: 8,
+    gap: 10,
     flex: 1,
   },
+  headerIconBadge: {
+    width: 36,
+    height: 36,
+    borderRadius: 8,
+    backgroundColor: 'rgba(56, 189, 248, 0.12)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  titleBox: {
+    flex: 1,
+  },
+  adminTitleRow: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: 4,
+    flexWrap: 'wrap',
+  },
   cardTitle: {
-    fontSize: 14,
-    fontWeight: '800',
+    fontSize: 15,
+    fontWeight: '900',
     color: '#f8fafc',
     textAlign: 'right',
+  },
+  adminBadge: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#0284c7',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  adminBadgeText: {
+    color: '#ffffff',
+    fontSize: 12,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+  },
+  adminSubTitle: {
+    fontSize: 10.5,
+    color: '#94a3b8',
+    marginTop: 2,
+    textAlign: 'right',
+  },
+  headerActionsToolbar: {
+    flexDirection: 'row-reverse',
+    gap: 8,
+    alignItems: 'center',
+    marginTop: 10,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255, 255, 255, 0.05)',
+  },
+  toolbarBtn: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 8,
+    gap: 6,
+  },
+  toolbarBtnText: {
+    color: '#ffffff',
+    fontSize: 11.5,
+    fontWeight: '700',
   },
   pdfBtn: {
     flexDirection: 'row-reverse',

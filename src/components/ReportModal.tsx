@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Modal,
   View,
@@ -10,7 +10,7 @@ import {
   ActivityIndicator,
   Image,
 } from 'react-native';
-import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
+import { MaterialCommunityIcons, Ionicons, FontAwesome5 } from '@expo/vector-icons';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import {
@@ -39,7 +39,39 @@ export const ReportModal: React.FC<ReportModalProps> = ({
   const stdInfo = FEDDAN_VALUES[config.feddanStandard];
   const { feddans, qirats, sahms } = results.feddanBreakdown;
 
-  // Generate HTML for PDF export without nozzle table
+  // Compute Timer vs Applied Depth Operational Guide Table
+  const timerGuideList = useMemo(() => {
+    const percentages = [100, 90, 80, 70, 60, 50, 40, 30, 20, 10];
+    const baseSpeed100 =
+      results.operational.lastTowerSpeedActualMPerHr / (config.timerPercent / 100 || 1);
+
+    return percentages.map((pct) => {
+      const factor = pct / 100;
+      const speedMPerHr = Math.max(0.1, baseSpeed100 * factor);
+      const hours = results.operational.lastTowerCircumferenceM / speedMPerHr;
+      const depthMm =
+        results.totalAreaM2 > 0
+          ? (results.hydraulic.requiredFlowM3PerHour * hours * 1000) / results.totalAreaM2
+          : 0;
+      const isCurrent = pct === config.timerPercent;
+      return {
+        pct,
+        speedMPerHr,
+        hours,
+        days: hours / 24,
+        depthMm,
+        isCurrent,
+      };
+    });
+  }, [
+    config.timerPercent,
+    results.operational.lastTowerSpeedActualMPerHr,
+    results.operational.lastTowerCircumferenceM,
+    results.hydraulic.requiredFlowM3PerHour,
+    results.totalAreaM2,
+  ]);
+
+  // Generate HTML for PDF export without nozzle table (concise executive + irrigation & operation report)
   const buildReportHtml = () => {
     const towerRowsHtml = results.towerRings
       .map(
@@ -56,7 +88,9 @@ export const ReportModal: React.FC<ReportModalProps> = ({
       )
       .join('');
 
-    const overhangRowHtml = results.overhangRing.ringAreaM2 > 0 ? `
+    const overhangRowHtml =
+      results.overhangRing.ringAreaM2 > 0
+        ? `
       <tr style="background: #f0fdf4;">
         <td style="padding: 7px; border: 1px solid #cbd5e1; text-align: center; font-weight: bold; color: #166534;">الكابولي (${config.overhangLength} م)</td>
         <td style="padding: 7px; border: 1px solid #cbd5e1; text-align: center;">${formatNumber(config.overhangLength, 1)} م</td>
@@ -65,37 +99,202 @@ export const ReportModal: React.FC<ReportModalProps> = ({
         <td style="padding: 7px; border: 1px solid #cbd5e1; text-align: center; font-weight: bold;">${formatNumber(results.totalFeddans, 2)} ف</td>
         <td style="padding: 7px; border: 1px solid #cbd5e1; text-align: center;">${formatNumber(results.overhangRing.percentageOfTotal, 1)}%</td>
       </tr>
-    ` : '';
+    `
+        : '';
+
+    const endGunRowHtml =
+      config.hasEndGun && results.endGunRing
+        ? `
+      <tr style="background: #fffbeb;">
+        <td style="padding: 7px; border: 1px solid #cbd5e1; text-align: center; font-weight: bold; color: #b45309;">مدفع النهاية (${config.endGunThrow} م)</td>
+        <td style="padding: 7px; border: 1px solid #cbd5e1; text-align: center;">${formatNumber(config.endGunThrow, 1)} م</td>
+        <td style="padding: 7px; border: 1px solid #cbd5e1; text-align: center;">${Math.round(results.totalWettedRadius)} م</td>
+        <td style="padding: 7px; border: 1px solid #cbd5e1; text-align: center; color: #d97706; font-weight: bold;">${formatNumber(results.endGunRing.ringFeddans, 2)} ف</td>
+        <td style="padding: 7px; border: 1px solid #cbd5e1; text-align: center; font-weight: bold;">${formatNumber(results.totalFeddans, 2)} ف</td>
+        <td style="padding: 7px; border: 1px solid #cbd5e1; text-align: center;">${formatNumber(results.endGunRing.percentageOfTotal, 1)}%</td>
+      </tr>
+    `
+        : '';
+
+    // Timer Guide rows HTML
+    const timerGuideRowsHtml = timerGuideList
+      .map(
+        (t) => `
+        <tr style="${t.isCurrent ? 'background: #e0f2fe; font-weight: bold;' : ''}">
+          <td style="padding: 6px; border: 1px solid #cbd5e1; text-align: center; color: ${t.isCurrent ? '#0369a1' : '#0f172a'}; font-weight: bold;">
+            ${t.pct}% ${t.isCurrent ? '⭐ (المضبوط)' : ''}
+          </td>
+          <td style="padding: 6px; border: 1px solid #cbd5e1; text-align: center;">${formatNumber(t.hours, 1)} س (${formatNumber(t.days, 1)} يوم)</td>
+          <td style="padding: 6px; border: 1px solid #cbd5e1; text-align: center;">${formatNumber(t.speedMPerHr, 1)} م/س</td>
+          <td style="padding: 6px; border: 1px solid #cbd5e1; text-align: center; color: #059669; font-weight: bold;">${formatNumber(t.depthMm, 1)} ملم</td>
+        </tr>
+      `
+      )
+      .join('');
 
     return `
       <!DOCTYPE html>
       <html dir="rtl" lang="ar">
         <head>
           <meta charset="utf-8" />
-          <title>تقرير المواصفات الهندسية والتشغيل والري - Aqua Pivot</title>
+          <title>تقرير المواصفات وتشغيل الري المعتمد - Aqua Pivot</title>
           <style>
-            body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; background: #ffffff; color: #0f172a; padding: 24px; direction: rtl; }
-            .header { border-bottom: 2px solid #0284c7; padding-bottom: 14px; margin-bottom: 18px; display: flex; justify-content: space-between; align-items: center; }
-            .brand-box { display: flex; align-items: center; gap: 14px; }
-            .logo-img { width: 64px; height: 64px; border-radius: 12px; object-fit: contain; }
-            .title { font-size: 22px; font-weight: 800; color: #0369a1; margin: 0; }
-            .subtitle { font-size: 13px; color: #64748b; margin-top: 4px; }
-            .kpi-box { background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 10px; padding: 14px; margin-bottom: 18px; text-align: center; }
-            .kpi-val { font-size: 30px; font-weight: 900; color: #0284c7; }
-            .kpi-lbl { font-size: 13px; color: #0369a1; font-weight: bold; margin-top: 4px; }
-            .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 18px; }
-            .card { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px; text-align: center; }
-            .card-title { font-size: 11px; color: #64748b; font-weight: 600; }
-            .card-val { font-size: 15px; font-weight: bold; color: #0f172a; margin-top: 4px; }
-            .section-title { color: #0369a1; font-size: 15px; font-weight: bold; margin-top: 22px; margin-bottom: 10px; border-right: 4px solid #0284c7; padding-right: 10px; }
-            table { width: 100%; border-collapse: collapse; margin-top: 8px; margin-bottom: 18px; font-size: 11px; }
-            th { background: #e0f2fe; color: #0369a1; padding: 8px; border: 1px solid #cbd5e1; text-align: center; font-weight: bold; }
-            .info-table { width: 100%; border-collapse: collapse; margin-bottom: 16px; }
-            .info-table td { padding: 8px 12px; border: 1px solid #e2e8f0; font-size: 12px; }
-            .info-table tr:nth-child(even) { background-color: #f8fafc; }
-            .info-label { font-weight: bold; color: #475569; width: 40%; }
-            .info-value { color: #0f172a; font-weight: 700; width: 60%; }
-            .footer { margin-top: 30px; border-top: 1px solid #e2e8f0; padding-top: 10px; font-size: 11px; color: #94a3b8; text-align: center; }
+            @page {
+              size: A4 portrait;
+              margin: 14mm 12mm 16mm 12mm;
+            }
+            body {
+              font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Cairo", Arial, sans-serif;
+              background: #ffffff;
+              color: #0f172a;
+              padding: 0;
+              margin: 0;
+              direction: rtl;
+              font-size: 11.5px;
+              line-height: 1.45;
+            }
+            .header {
+              border-bottom: 2px solid #0284c7;
+              padding-bottom: 12px;
+              margin-bottom: 14px;
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+            }
+            .brand-box {
+              display: flex;
+              align-items: center;
+              gap: 12px;
+            }
+            .logo-img {
+              width: 60px;
+              height: 60px;
+              border-radius: 12px;
+              object-fit: contain;
+            }
+            .title {
+              font-size: 20px;
+              font-weight: 900;
+              color: #0369a1;
+              margin: 0;
+            }
+            .subtitle {
+              font-size: 12px;
+              color: #64748b;
+              margin-top: 3px;
+            }
+            .kpi-box {
+              background: #f0f9ff;
+              border: 1px solid #bae6fd;
+              border-radius: 10px;
+              padding: 12px;
+              margin-bottom: 14px;
+              text-align: center;
+            }
+            .kpi-val {
+              font-size: 28px;
+              font-weight: 900;
+              color: #0284c7;
+            }
+            .kpi-lbl {
+              font-size: 12px;
+              color: #0369a1;
+              font-weight: bold;
+              margin-top: 3px;
+            }
+            .grid {
+              display: grid;
+              grid-template-columns: repeat(4, 1fr);
+              gap: 8px;
+              margin-bottom: 14px;
+            }
+            .card {
+              background: #f8fafc;
+              border: 1px solid #e2e8f0;
+              border-radius: 8px;
+              padding: 8px;
+              text-align: center;
+            }
+            .card-title {
+              font-size: 10.5px;
+              color: #64748b;
+              font-weight: 600;
+            }
+            .card-val {
+              font-size: 14px;
+              font-weight: bold;
+              color: #0f172a;
+              margin-top: 3px;
+            }
+            .section-title {
+              color: #0369a1;
+              font-size: 13.5px;
+              font-weight: 800;
+              margin-top: 16px;
+              margin-bottom: 8px;
+              border-right: 4px solid #0284c7;
+              padding-right: 8px;
+            }
+            table {
+              width: 100%;
+              border-collapse: collapse;
+              margin-bottom: 12px;
+              font-size: 10.5px;
+            }
+            thead {
+              display: table-header-group;
+            }
+            tr {
+              page-break-inside: avoid;
+            }
+            th {
+              background: #e0f2fe;
+              color: #0369a1;
+              padding: 7px;
+              border: 1px solid #cbd5e1;
+              text-align: center;
+              font-weight: bold;
+            }
+            .info-table {
+              width: 100%;
+              border-collapse: collapse;
+              margin-bottom: 12px;
+            }
+            .info-table td {
+              padding: 7px 10px;
+              border: 1px solid #e2e8f0;
+              font-size: 11px;
+            }
+            .info-table tr:nth-child(even) {
+              background-color: #f8fafc;
+            }
+            .info-label {
+              font-weight: bold;
+              color: #475569;
+              width: 42%;
+            }
+            .info-value {
+              color: #0f172a;
+              font-weight: 700;
+              width: 58%;
+            }
+            .two-cols {
+              display: flex;
+              gap: 12px;
+              margin-bottom: 12px;
+            }
+            .col-half {
+              flex: 1;
+            }
+            .footer {
+              margin-top: 24px;
+              border-top: 1px solid #e2e8f0;
+              padding-top: 8px;
+              font-size: 10px;
+              color: #94a3b8;
+              text-align: center;
+              page-break-inside: avoid;
+            }
           </style>
         </head>
         <body>
@@ -153,24 +352,29 @@ export const ReportModal: React.FC<ReportModalProps> = ({
             <tbody>
               ${towerRowsHtml}
               ${overhangRowHtml}
+              ${endGunRowHtml}
             </tbody>
           </table>
 
           <!-- Section 2: Operation & Timing -->
-          <div class="section-title">ثانياً: الحسابات التشغيلية وسرعة المحور (Operation & Timing)</div>
+          <div class="section-title">ثانياً: تقرير تشغيل وسرعة المحور (Operation & Timing)</div>
           <table class="info-table">
             <tbody>
               <tr>
                 <td class="info-label">نسبة ضبط المؤقت (التايمر %):</td>
-                <td class="info-value">${config.timerPercent}%</td>
+                <td class="info-value" style="color: #0284c7; font-size: 13px;">${config.timerPercent}%</td>
               </tr>
               <tr>
-                <td class="info-label">زمن اللفة الكاملة عند 100%:</td>
-                <td class="info-value">${formatNumber(results.operational.rotationHoursAt100, 1)} ساعة (${formatNumber(results.operational.rotationHoursAt100 / 24, 1)} يوم)</td>
+                <td class="info-label">زمن اللفة الكاملة (360°) عند 100%:</td>
+                <td class="info-value">${formatNumber(results.operational.rotationHoursAt100, 1)} ساعة (${formatNumber(results.operational.rotationHoursAt100 / 24, 1)} يوم مستمر)</td>
               </tr>
               <tr>
                 <td class="info-label">زمن اللفة الفعلي عند نسبة ${config.timerPercent}%:</td>
-                <td class="info-value" style="color: #0284c7;">${formatNumber(results.operational.actualRotationHours, 1)} ساعة (${formatNumber(results.operational.actualRotationDays, 1)} يوم)</td>
+                <td class="info-value" style="color: #0284c7;">${formatNumber(results.operational.actualRotationHours, 1)} ساعة (${formatNumber(results.operational.actualRotationDays, 1)} يوم مستمر)</td>
+              </tr>
+              <tr>
+                <td class="info-label">ساعات تشغيل المضخة اليومية المقررة:</td>
+                <td class="info-value">${config.dailyOperatingHours} ساعة/يوم (${formatNumber(results.operational.calendarDaysWithPumpHours, 1)} يوم تقويمي للفة)</td>
               </tr>
               <tr>
                 <td class="info-label">سرعة البرج الأخير عند 100%:</td>
@@ -185,18 +389,34 @@ export const ReportModal: React.FC<ReportModalProps> = ({
                 <td class="info-value">${Math.round(results.operational.lastTowerCircumferenceM)} متر</td>
               </tr>
               <tr>
-                <td class="info-label">عمق مياه الري المطبق في اللفة (Gross Depth):</td>
-                <td class="info-value" style="color: #059669;">${formatNumber(results.operational.appliedDepthMmPerPass, 1)} ملم / لفة</td>
+                <td class="info-label">عمق مياه الري المطبق في اللفة (Gross Applied Depth):</td>
+                <td class="info-value" style="color: #059669; font-size: 13px;">${formatNumber(results.operational.appliedDepthMmPerPass, 1)} ملم / لفة</td>
               </tr>
             </tbody>
           </table>
 
-          <!-- Section 3: Hydraulics & Agronomy -->
-          <div class="section-title">ثالثاً: متطلبات الري والهيدروليكا والمحصول (Hydraulics & Agronomy)</div>
+          <!-- Section 3: Operational Guide: Timer vs Depth -->
+          <div class="section-title">ثالثاً: دليل تشغيل الري وسرعات التايمر (Timer vs Depth Guide)</div>
+          <table>
+            <thead>
+              <tr>
+                <th>نسبة التايمر (%)</th>
+                <th>زمن اللفة الكاملة</th>
+                <th>سرعة البرج الأخير</th>
+                <th>عمق الري المطبق (ملم/لفة)</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${timerGuideRowsHtml}
+            </tbody>
+          </table>
+
+          <!-- Section 4: Hydraulics & Agronomy -->
+          <div class="section-title">رابعاً: المقررات المائية والهيدروليكا والمحصول (Hydraulics & Agronomy)</div>
           <table class="info-table">
             <tbody>
               <tr>
-                <td class="info-label">التدفق المطلوب بالمتر المكعب:</td>
+                <td class="info-label">التدفق الإجمالي المطلوب بالمتر المكعب:</td>
                 <td class="info-value" style="color: #0284c7;">${formatNumber(results.hydraulic.requiredFlowM3PerHour, 1)} م³/ساعة</td>
               </tr>
               <tr>
@@ -223,11 +443,15 @@ export const ReportModal: React.FC<ReportModalProps> = ({
                 <td class="info-label">الاحتياج المائي الإجمالي للفدان:</td>
                 <td class="info-value" style="color: #059669;">${formatNumber(results.agronomic.grossDailyVolumeM3PerFeddan, 1)} م³/فدان/يوم</td>
               </tr>
+              <tr>
+                <td class="info-label">العمق المقترح علمياً للمحصول:</td>
+                <td class="info-value">${formatNumber(results.agronomic.recommendedDepthMm, 1)} ملم/يوم</td>
+              </tr>
             </tbody>
           </table>
 
           <div class="footer">
-            تم استخراج هذا التقرير الهندسي والمواصفات التشغيلية بواسطة منظومة Aqua Pivot المعتمدة لهندسة وتشغيل الري المحوري
+            تم استخراج هذا التقرير الهندسي والتشغيلي المعتمد بواسطة منظومة Aqua Pivot Calc PRO لهندسة وتشغيل الري المحوري
           </div>
         </body>
       </html>
@@ -282,8 +506,8 @@ export const ReportModal: React.FC<ReportModalProps> = ({
                 />
               </View>
               <View>
-                <Text style={styles.modalTitle}>التقرير الهندسي المعتمد</Text>
-                <Text style={styles.modalSubtitle}>Aqua Pivot Calc · المواصفات والتشغيل والري</Text>
+                <Text style={styles.modalTitle}>التقرير الهندسي والتشغيلي المعتمد</Text>
+                <Text style={styles.modalSubtitle}>Aqua Pivot Calc · تقرير المواصفات والري والتشغيل</Text>
               </View>
             </View>
             <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
@@ -298,7 +522,7 @@ export const ReportModal: React.FC<ReportModalProps> = ({
               <Text style={styles.reportHeroSubtitle}>إجمالي مساحة المحور بالفدان</Text>
               <Text style={styles.reportHeroVal}>{formatNumber(results.totalFeddans, 2)} فدان</Text>
               <Text style={styles.reportHeroBreakdown}>
-                {feddans} فدان و {qirats} قيراط و {sahms} سهم
+                {feddans} فدان و {qirats} قيراط و {sahms} سهم ({formatNumber(results.totalAreaM2, 0)} م² / {formatNumber(results.totalHectares, 2)} هكتار)
               </Text>
             </View>
 
@@ -325,95 +549,19 @@ export const ReportModal: React.FC<ReportModalProps> = ({
                   <Text style={styles.specLabel}>طول الكابولي (Overhang):</Text>
                   <Text style={styles.specVal}>{config.overhangLength} متر</Text>
                 </View>
+                {config.hasEndGun && results.endGunRing && (
+                  <View style={styles.specRow}>
+                    <Text style={styles.specLabel}>مدفع النهاية (End Gun):</Text>
+                    <Text style={[styles.specVal, { color: '#f59e0b' }]}>{config.endGunThrow} متر</Text>
+                  </View>
+                )}
                 <View style={styles.specRow}>
                   <Text style={styles.specLabel}>نصف قطر البلل الإجمالي:</Text>
-                  <Text style={styles.specVal}>{Math.round(results.totalWettedRadius)} متر</Text>
+                  <Text style={[styles.specVal, { color: '#38bdf8' }]}>{Math.round(results.totalWettedRadius)} متر</Text>
                 </View>
                 <View style={styles.specRow}>
                   <Text style={styles.specLabel}>المساحة بالمتر المربع:</Text>
                   <Text style={styles.specVal}>{formatNumber(results.totalAreaM2, 0)} م²</Text>
-                </View>
-              </View>
-            </View>
-
-            {/* Operation Section */}
-            <View style={styles.cardSection}>
-              <View style={styles.sectionHeader}>
-                <MaterialCommunityIcons name="speedometer" size={18} color="#38bdf8" />
-                <Text style={styles.sectionHeading}>حسابات التشغيل والسرعة</Text>
-              </View>
-              <View style={styles.specBox}>
-                <View style={styles.specRow}>
-                  <Text style={styles.specLabel}>نسبة التايمر المضبوطة:</Text>
-                  <Text style={[styles.specVal, { color: '#38bdf8' }]}>{config.timerPercent}%</Text>
-                </View>
-                <View style={styles.specRow}>
-                  <Text style={styles.specLabel}>زمن اللفة الكاملة (360°):</Text>
-                  <Text style={[styles.specVal, { color: '#38bdf8' }]}>
-                    {formatNumber(results.operational.actualRotationHours, 1)} ساعة ({formatNumber(results.operational.actualRotationDays, 1)} يوم)
-                  </Text>
-                </View>
-                <View style={styles.specRow}>
-                  <Text style={styles.specLabel}>زمن الدورة عند 100%:</Text>
-                  <Text style={styles.specVal}>
-                    {formatNumber(results.operational.rotationHoursAt100, 1)} ساعة
-                  </Text>
-                </View>
-                <View style={styles.specRow}>
-                  <Text style={styles.specLabel}>سرعة البرج الأخير الفعلية:</Text>
-                  <Text style={styles.specVal}>
-                    {formatNumber(results.operational.lastTowerSpeedActualMPerHr, 1)} م/ساعة
-                  </Text>
-                </View>
-                <View style={styles.specRow}>
-                  <Text style={styles.specLabel}>محيط مسار البرج الأخير:</Text>
-                  <Text style={styles.specVal}>{Math.round(results.operational.lastTowerCircumferenceM)} متر</Text>
-                </View>
-                <View style={styles.specRow}>
-                  <Text style={styles.specLabel}>عمق المياه المطبق في اللفة:</Text>
-                  <Text style={[styles.specVal, { color: '#34d399' }]}>
-                    {formatNumber(results.operational.appliedDepthMmPerPass, 1)} ملم/لفة
-                  </Text>
-                </View>
-              </View>
-            </View>
-
-            {/* Hydraulics & Irrigation Section */}
-            <View style={styles.cardSection}>
-              <View style={styles.sectionHeader}>
-                <MaterialCommunityIcons name="water" size={18} color="#38bdf8" />
-                <Text style={styles.sectionHeading}>الهيدروليكا ومقررات الري</Text>
-              </View>
-              <View style={styles.specBox}>
-                <View style={styles.specRow}>
-                  <Text style={styles.specLabel}>التدفق المطلوب بالمتر المكعب:</Text>
-                  <Text style={[styles.specVal, { color: '#38bdf8' }]}>
-                    {formatNumber(results.hydraulic.requiredFlowM3PerHour, 1)} م³/ساعة
-                  </Text>
-                </View>
-                <View style={styles.specRow}>
-                  <Text style={styles.specLabel}>التدفق المطلوب بالجالون:</Text>
-                  <Text style={styles.specVal}>{formatNumber(results.hydraulic.requiredFlowGpm, 0)} GPM</Text>
-                </View>
-                <View style={styles.specRow}>
-                  <Text style={styles.specLabel}>التدفق باللتر في الثانية:</Text>
-                  <Text style={styles.specVal}>{formatNumber(results.hydraulic.requiredFlowLitersPerSec, 1)} لتر/ث</Text>
-                </View>
-                <View style={styles.specRow}>
-                  <Text style={styles.specLabel}>استهلاك المياه اليومي:</Text>
-                  <Text style={styles.specVal}>{formatNumber(results.hydraulic.waterVolumeM3PerDay, 0)} م³/يوم</Text>
-                </View>
-                <View style={styles.specRow}>
-                  <Text style={styles.specLabel}>المحصول والمناخ:</Text>
-                  <Text style={styles.specVal}>
-                    {results.agronomic.cropNameAr} ({results.agronomic.climateNameAr})
-                  </Text>
-                </View>
-                <View style={styles.specRow}>
-                  <Text style={styles.specLabel}>الاحتياج الإجمالي للفدان:</Text>
-                  <Text style={[styles.specVal, { color: '#34d399' }]}>
-                    {formatNumber(results.agronomic.grossDailyVolumeM3PerFeddan, 1)} م³/فدان/يوم
-                  </Text>
                 </View>
               </View>
             </View>
@@ -464,6 +612,169 @@ export const ReportModal: React.FC<ReportModalProps> = ({
                     </Text>
                   </View>
                 )}
+
+                {config.hasEndGun && results.endGunRing && (
+                  <View style={[styles.tableDataRow, { backgroundColor: 'rgba(245, 158, 11, 0.08)' }]}>
+                    <Text style={[styles.tdText, { width: 50, color: '#f59e0b', fontWeight: '700' }]}>
+                      مدفع
+                    </Text>
+                    <Text style={[styles.tdText, { flex: 1, color: '#f59e0b' }]}>{formatNumber(config.endGunThrow, 1)} م</Text>
+                    <Text style={[styles.tdText, { flex: 1, color: '#f59e0b' }]}>{Math.round(results.totalWettedRadius)} م</Text>
+                    <Text style={[styles.tdText, { flex: 1, color: '#f59e0b', fontWeight: '700' }]}>
+                      {formatNumber(results.endGunRing.ringFeddans, 1)} ف
+                    </Text>
+                    <Text style={[styles.tdText, { width: 45, color: '#f59e0b' }]}>
+                      {formatNumber(results.endGunRing.percentageOfTotal, 0)}%
+                    </Text>
+                  </View>
+                )}
+              </View>
+            </View>
+
+            {/* Operation & Timing Section */}
+            <View style={styles.cardSection}>
+              <View style={styles.sectionHeader}>
+                <MaterialCommunityIcons name="speedometer" size={18} color="#38bdf8" />
+                <Text style={styles.sectionHeading}>حسابات التشغيل والسرعة (Operation & Timing)</Text>
+              </View>
+              <View style={styles.specBox}>
+                <View style={styles.specRow}>
+                  <Text style={styles.specLabel}>نسبة التايمر المضبوطة:</Text>
+                  <Text style={[styles.specVal, { color: '#38bdf8', fontSize: 13 }]}>{config.timerPercent}%</Text>
+                </View>
+                <View style={styles.specRow}>
+                  <Text style={styles.specLabel}>زمن اللفة الكاملة (360°):</Text>
+                  <Text style={[styles.specVal, { color: '#38bdf8' }]}>
+                    {formatNumber(results.operational.actualRotationHours, 1)} ساعة ({formatNumber(results.operational.actualRotationDays, 1)} يوم مستمر)
+                  </Text>
+                </View>
+                <View style={styles.specRow}>
+                  <Text style={styles.specLabel}>ساعات الضخ اليومية المقررة:</Text>
+                  <Text style={styles.specVal}>{config.dailyOperatingHours} ساعة/يوم ({formatNumber(results.operational.calendarDaysWithPumpHours, 1)} يوم تقويمي)</Text>
+                </View>
+                <View style={styles.specRow}>
+                  <Text style={styles.specLabel}>زمن الدورة عند 100%:</Text>
+                  <Text style={styles.specVal}>
+                    {formatNumber(results.operational.rotationHoursAt100, 1)} ساعة ({formatNumber(results.operational.rotationHoursAt100 / 24, 1)} يوم)
+                  </Text>
+                </View>
+                <View style={styles.specRow}>
+                  <Text style={styles.specLabel}>سرعة البرج الأخير الفعلية:</Text>
+                  <Text style={styles.specVal}>
+                    {formatNumber(results.operational.lastTowerSpeedActualMPerHr, 1)} م/ساعة
+                  </Text>
+                </View>
+                <View style={styles.specRow}>
+                  <Text style={styles.specLabel}>محيط مسار البرج الأخير:</Text>
+                  <Text style={styles.specVal}>{Math.round(results.operational.lastTowerCircumferenceM)} متر</Text>
+                </View>
+                <View style={styles.specRow}>
+                  <Text style={styles.specLabel}>عمق المياه المطبق في اللفة:</Text>
+                  <Text style={[styles.specVal, { color: '#34d399', fontSize: 13 }]}>
+                    {formatNumber(results.operational.appliedDepthMmPerPass, 1)} ملم / لفة
+                  </Text>
+                </View>
+              </View>
+            </View>
+
+            {/* Operational Guide: Timer vs Depth Table */}
+            <View style={styles.cardSection}>
+              <View style={styles.sectionHeader}>
+                <MaterialCommunityIcons name="timer-cog-outline" size={18} color="#38bdf8" />
+                <Text style={styles.sectionHeading}>دليل ضبط التايمر وأعماق مياه الري (Timer vs Depth)</Text>
+              </View>
+              <Text style={styles.tableSubNote}>
+                جدول إرشادي يوضح عمق مياه الري المعطى للحقل عند نسب تايمر مختلفة:
+              </Text>
+              <View style={styles.tableCard}>
+                <View style={styles.tableHeaderRow}>
+                  <Text style={[styles.thText, { flex: 1.1 }]}>التايمر %</Text>
+                  <Text style={[styles.thText, { flex: 1.4 }]}>زمن اللفة</Text>
+                  <Text style={[styles.thText, { flex: 1.3 }]}>السرعة (م/س)</Text>
+                  <Text style={[styles.thText, { flex: 1.4 }]}>العمق (ملم)</Text>
+                </View>
+
+                {timerGuideList.map((t) => (
+                  <View
+                    key={t.pct}
+                    style={[
+                      styles.tableDataRow,
+                      t.isCurrent && { backgroundColor: 'rgba(2, 132, 199, 0.2)' },
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.tdText,
+                        { flex: 1.1, fontWeight: '800' },
+                        t.isCurrent ? { color: '#38bdf8' } : { color: '#f8fafc' },
+                      ]}
+                    >
+                      {t.pct}% {t.isCurrent ? '⭐' : ''}
+                    </Text>
+                    <Text style={[styles.tdText, { flex: 1.4 }]}>
+                      {formatNumber(t.hours, 1)} س
+                    </Text>
+                    <Text style={[styles.tdText, { flex: 1.3 }]}>
+                      {formatNumber(t.speedMPerHr, 1)}
+                    </Text>
+                    <Text
+                      style={[
+                        styles.tdText,
+                        { flex: 1.4, color: '#34d399', fontWeight: '800' },
+                      ]}
+                    >
+                      {formatNumber(t.depthMm, 1)} ملم
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            </View>
+
+            {/* Hydraulics & Irrigation Section */}
+            <View style={styles.cardSection}>
+              <View style={styles.sectionHeader}>
+                <MaterialCommunityIcons name="water" size={18} color="#38bdf8" />
+                <Text style={styles.sectionHeading}>الهيدروليكا ومقررات الري (Hydraulics & Agronomy)</Text>
+              </View>
+              <View style={styles.specBox}>
+                <View style={styles.specRow}>
+                  <Text style={styles.specLabel}>التدفق المطلوب بالمتر المكعب:</Text>
+                  <Text style={[styles.specVal, { color: '#38bdf8', fontSize: 13 }]}>
+                    {formatNumber(results.hydraulic.requiredFlowM3PerHour, 1)} م³/ساعة
+                  </Text>
+                </View>
+                <View style={styles.specRow}>
+                  <Text style={styles.specLabel}>التدفق المطلوب بالجالون:</Text>
+                  <Text style={styles.specVal}>{formatNumber(results.hydraulic.requiredFlowGpm, 0)} GPM</Text>
+                </View>
+                <View style={styles.specRow}>
+                  <Text style={styles.specLabel}>التدفق باللتر في الثانية:</Text>
+                  <Text style={styles.specVal}>{formatNumber(results.hydraulic.requiredFlowLitersPerSec, 1)} لتر/ث</Text>
+                </View>
+                <View style={styles.specRow}>
+                  <Text style={styles.specLabel}>استهلاك المياه اليومي الإجمالي:</Text>
+                  <Text style={styles.specVal}>{formatNumber(results.hydraulic.waterVolumeM3PerDay, 0)} م³/يوم</Text>
+                </View>
+                <View style={styles.specRow}>
+                  <Text style={styles.specLabel}>المحصول والمناخ:</Text>
+                  <Text style={styles.specVal}>
+                    {results.agronomic.cropNameAr} ({results.agronomic.climateNameAr} - {results.agronomic.temperatureC}°C)
+                  </Text>
+                </View>
+                <View style={styles.specRow}>
+                  <Text style={styles.specLabel}>البخر نتح المرجعي (ETo):</Text>
+                  <Text style={styles.specVal}>{formatNumber(results.agronomic.etoMm, 1)} ملم/يوم</Text>
+                </View>
+                <View style={styles.specRow}>
+                  <Text style={styles.specLabel}>معامل المحصول (Kc):</Text>
+                  <Text style={styles.specVal}>{formatNumber(results.agronomic.cropKc, 2)}</Text>
+                </View>
+                <View style={styles.specRow}>
+                  <Text style={styles.specLabel}>الاحتياج الإجمالي للفدان:</Text>
+                  <Text style={[styles.specVal, { color: '#34d399' }]}>
+                    {formatNumber(results.agronomic.grossDailyVolumeM3PerFeddan, 1)} م³/فدان/يوم
+                  </Text>
+                </View>
               </View>
             </View>
           </ScrollView>
@@ -510,7 +821,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#0f172a',
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
-    maxHeight: '88%',
+    maxHeight: '90%',
     borderWidth: 1,
     borderColor: '#1e293b',
     padding: 16,
@@ -527,125 +838,124 @@ const styles = StyleSheet.create({
     flexDirection: 'row-reverse',
     alignItems: 'center',
     gap: 10,
+    flex: 1,
   },
   modalLogoBadge: {
-    width: 38,
-    height: 38,
+    width: 44,
+    height: 44,
     borderRadius: 10,
-    backgroundColor: '#ffffff',
-    borderWidth: 1,
-    borderColor: '#38bdf8',
+    backgroundColor: '#0284c7',
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
-    padding: 2,
   },
   modalLogoImg: {
-    width: '100%',
-    height: '100%',
+    width: 38,
+    height: 38,
   },
   modalTitle: {
     fontSize: 15,
     fontWeight: '800',
     color: '#f8fafc',
-    textAlign: 'right',
   },
   modalSubtitle: {
     fontSize: 11,
     color: '#94a3b8',
-    textAlign: 'right',
     marginTop: 2,
   },
   closeBtn: {
-    width: 32,
-    height: 32,
-    alignItems: 'center',
-    justifyContent: 'center',
+    padding: 6,
     borderRadius: 8,
     backgroundColor: '#1e293b',
   },
   scrollBody: {
-    paddingVertical: 14,
+    marginTop: 12,
   },
   reportHero: {
-    backgroundColor: '#0c4a6e',
+    backgroundColor: '#1e293b',
     borderRadius: 12,
-    padding: 16,
+    padding: 14,
     alignItems: 'center',
     borderWidth: 1,
     borderColor: '#0284c7',
     marginBottom: 14,
   },
   reportHeroSubtitle: {
-    fontSize: 12,
-    color: '#bae6fd',
+    fontSize: 11.5,
+    color: '#94a3b8',
     fontWeight: '600',
   },
   reportHeroVal: {
-    fontSize: 34,
+    fontSize: 26,
     fontWeight: '900',
-    color: '#ffffff',
+    color: '#38bdf8',
     marginVertical: 4,
   },
   reportHeroBreakdown: {
-    fontSize: 12,
-    color: '#7dd3fc',
+    fontSize: 11.5,
+    color: '#cbd5e1',
     fontWeight: '700',
+    textAlign: 'center',
   },
   cardSection: {
+    backgroundColor: '#1e293b',
+    borderRadius: 12,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#334155',
     marginBottom: 14,
   },
   sectionHeader: {
     flexDirection: 'row-reverse',
     alignItems: 'center',
     gap: 6,
-    marginBottom: 8,
+    marginBottom: 10,
   },
   sectionHeading: {
-    fontSize: 13,
+    fontSize: 12.5,
     fontWeight: '700',
-    color: '#38bdf8',
-    textAlign: 'right',
+    color: '#f8fafc',
+  },
+  tableSubNote: {
+    fontSize: 10.5,
+    color: '#94a3b8',
+    marginBottom: 8,
+    lineHeight: 16,
   },
   specBox: {
-    backgroundColor: '#020617',
-    borderRadius: 12,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: '#1e293b',
+    backgroundColor: '#0f172a',
+    borderRadius: 8,
+    padding: 10,
     gap: 8,
   },
   specRow: {
     flexDirection: 'row-reverse',
-    alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: 4,
-    borderBottomWidth: 1,
-    borderBottomColor: '#0f172a',
+    alignItems: 'center',
   },
   specLabel: {
-    fontSize: 12,
+    fontSize: 11.5,
     color: '#94a3b8',
   },
   specVal: {
-    fontSize: 12,
+    fontSize: 11.5,
     fontWeight: '700',
     color: '#f8fafc',
   },
   tableCard: {
-    backgroundColor: '#020617',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#1e293b',
+    backgroundColor: '#0f172a',
+    borderRadius: 8,
     overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#334155',
   },
   tableHeaderRow: {
     flexDirection: 'row-reverse',
-    backgroundColor: '#0f172a',
+    backgroundColor: '#1e293b',
     paddingVertical: 8,
     paddingHorizontal: 8,
     borderBottomWidth: 1,
-    borderBottomColor: '#1e293b',
+    borderBottomColor: '#334155',
   },
   thText: {
     fontSize: 11,
@@ -655,15 +965,15 @@ const styles = StyleSheet.create({
   },
   tableDataRow: {
     flexDirection: 'row-reverse',
-    alignItems: 'center',
     paddingVertical: 7,
     paddingHorizontal: 8,
+    alignItems: 'center',
     borderBottomWidth: 1,
-    borderBottomColor: '#0f172a',
+    borderBottomColor: '#1e293b',
   },
   tdText: {
     fontSize: 11,
-    color: '#cbd5e1',
+    color: '#e2e8f0',
     textAlign: 'center',
   },
   modalFooter: {
@@ -678,19 +988,19 @@ const styles = StyleSheet.create({
     flexDirection: 'row-reverse',
     alignItems: 'center',
     justifyContent: 'center',
+    gap: 6,
     paddingVertical: 12,
     borderRadius: 10,
-    gap: 8,
   },
   shareBtn: {
     backgroundColor: '#0284c7',
   },
   printBtn: {
-    backgroundColor: '#059669',
+    backgroundColor: '#10b981',
   },
   actionBtnText: {
+    fontSize: 12.5,
+    fontWeight: '800',
     color: '#ffffff',
-    fontSize: 13,
-    fontWeight: '700',
   },
 });
